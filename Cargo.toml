@@ -8,15 +8,6 @@ xml-rs = "*"
 log = "*"
 env_logger = "*"
 
-[dependencies.piston]
-git = "https://github.com/pistondevelopers/piston"
-[dependencies.pistoncore-sdl2_window]
-git = "https://github.com/pistondevelopers/sdl2_window"
-[dependencies.piston2d-opengl_graphics]
-git = "https://github.com/pistondevelopers/opengl_graphics"
-[dependencies.piston2d-graphics]
-git = "https://github.com/pistondevelopers/graphics"
-
 [dependencies.tree]
 path = "src/tree"
 
