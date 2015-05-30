@@ -7,9 +7,12 @@ authors = ["jmbto <kagekyio@gmail.com>"]
 xml-rs = "*"
 log = "*"
 env_logger = "*"
+typed-arena = "*"
 
-[dependencies.tree]
-path = "src/tree"
+[dependencies.bml]
+path = "src/bml"
+[dependencies.arena-tree]
+path = "src/arena-tree"
 
 [[bin]]
 name = "papars"

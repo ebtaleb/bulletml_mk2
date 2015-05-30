@@ -1,0 +1,14 @@
+[package]
+name = "arena-tree"
+version = "0.3.0"
+authors = ["Simon Sapin <simon.sapin@exyr.org>"]
+license = "MIT"
+description = "An arena-based tree, with `RefCell` for mutability"
+repository = "https://github.com/SimonSapin/rust-forest"
+
+[lib]
+name = "arena_tree"
+path = "lib.rs"
+
+[dev-dependencies]
+typed-arena = "1.0"

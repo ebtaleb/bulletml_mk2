@@ -3,15 +3,17 @@ extern crate log;
 extern crate env_logger;
 
 extern crate xml;
-extern crate tree;
+extern crate bml;
 
+extern crate typed_arena;
+extern crate arena_tree;
+
+use std::env;
 use std::fs::File;
-use std::collections::HashMap;
 
 use xml::reader::EventReader;
 use xml::reader::events::*;
-
-use tree::bmltree::{TreeNode, Name, string2name, string2type};
+use bml::bml::{BulletMLNode, Name, string2name};
 
 fn indent(size: usize) -> String {
     let indent: &'static str = "    ";
@@ -25,7 +27,9 @@ fn main() {
     debug!("this is a debug {}", "message");
     error!("this is printed by default");
 
-    let file = File::open("src/sam.xml").unwrap();
+    let args: Vec<String> = env::args().collect();
+    let file = File::open(args[1].clone()).unwrap();
+
     let mut parser = EventReader::new(file);
     let mut depth = 0;
 
@@ -35,8 +39,9 @@ fn main() {
     let mut parent_label = "".to_string();
     let mut curr_label = "".to_string();
 
-    let mut parent_node = TreeNode::new_box("none");
-    let mut curr_node = parent_node.clone();
+    let arena = typed_arena::Arena::new();
+    //let root = arena.alloc(arena_tree::Node::new(BulletMLNode::new_cell("bulletml")));
+    let mut curr_node = arena.alloc(arena_tree::Node::new(BulletMLNode::new_cell("none")));
 
     let mut tag_stack : Vec<Name> = Vec::new();
 
@@ -56,8 +61,7 @@ fn main() {
                 depth += 1;
 
                 match name.local_name.as_ref() {
-                    "bulletml"
-                    | "bulletRef" | "actionRef" | "fireRef"
+                    "bulletRef" | "actionRef" | "fireRef"
                     | "bullet" | "fire" | "action"
                     | "changeDirection" | "changeSpeed"
                     | "accel" | "wait" | "vanish" | "repeat"
@@ -68,8 +72,7 @@ fn main() {
                         tag_stack.push(string2name(&name.local_name));
 
                         info!("pushing {}", &name.local_name);
-                        parent_node = curr_node;
-                        curr_node = TreeNode::new_box(&name.local_name);
+                        curr_node = arena.alloc(arena_tree::Node::new(BulletMLNode::new_cell(&name.local_name)));
 
                         match attributes.is_empty() {
                             true => {}
@@ -83,17 +86,16 @@ fn main() {
                                         } else {
                                             parent_label = curr_label
                                         }
-
-
                                     },
 
-                                    "type" => { (*curr_node).set_type(&attributes[0].value) },
+                                    "type" => { curr_node.data.borrow_mut().set_type(&attributes[0].value) },
                                     _ => {}
                                 }
                             }
                         }
                     }
 
+                    // bulletml ignored, we start with a bulletml node directly
                     _ => {}
                 }
             }
@@ -103,8 +105,7 @@ fn main() {
                 info!("popping {:?}", tag_stack.pop());
 
                 match name.local_name.as_ref() {
-                    "bulletml"
-                    | "bulletRef" | "actionRef" | "fireRef"
+                    "bulletRef" | "actionRef" | "fireRef"
                     | "bullet" | "fire" | "action"
                     | "changeDirection" | "changeSpeed"
                     | "accel" | "wait" | "vanish" | "repeat"
@@ -114,15 +115,11 @@ fn main() {
                         {
                             if curr_tag == name.local_name {
 
-                                (*parent_node).add_child(curr_node);
-
                                 depth -= 1;
                                 println!("{}-{}", indent(depth), &name.local_name);
 
                                 curr_tag = parent_tag.to_string();
                                 curr_label = parent_label.to_string();
-                                curr_node = parent_node.clone();
-
                             }
                         }
 

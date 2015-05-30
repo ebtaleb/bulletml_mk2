@@ -1,7 +1,8 @@
 [package]
-name = "tree"
+name = "bml"
 version = "0.1.0"
 authors = ["jmbto <kagekyio@gmail.com>"]
 
 [lib]
-name = "tree"
+name = "bml"
+path = "bml.rs"
