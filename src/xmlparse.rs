@@ -6,14 +6,13 @@ extern crate xml;
 extern crate bml;
 
 extern crate typed_arena;
-extern crate arena_tree;
 
 use std::env;
 use std::fs::File;
 
 use xml::reader::EventReader;
 use xml::reader::events::*;
-use bml::bml::{BulletMLNode, Name, string2name};
+use bml::bml::{BulletMLData, Node};
 
 fn indent(size: usize) -> String {
     let indent: &'static str = "    ";
@@ -33,32 +32,16 @@ fn main() {
     let mut parser = EventReader::new(file);
     let mut depth = 0;
 
-    let mut parent_tag = "".to_string();
     let mut curr_tag = "".to_string();
-
-    let mut parent_label = "".to_string();
     let mut curr_label = "".to_string();
+    let mut curr_type = "".to_string();
 
     let arena = typed_arena::Arena::new();
-    //let root = arena.alloc(arena_tree::Node::new(BulletMLNode::new_cell("bulletml")));
-    let mut curr_node = arena.alloc(arena_tree::Node::new(BulletMLNode::new_cell("none")));
-
-    let mut tag_stack : Vec<Name> = Vec::new();
+    let root = arena.alloc(Node::new(BulletMLData::new_cell("bulletml")));
 
     for e in parser.events() {
         match e {
             XmlEvent::StartElement { name, attributes, .. } => {
-
-                curr_tag = name.local_name.to_string();
-
-                if parent_tag == "" {
-                    parent_tag = name.local_name.to_string()
-                } else {
-                    parent_tag = curr_tag.to_string()
-                }
-
-                println!("{}+{} {:?}", indent(depth), name.local_name, attributes);
-                depth += 1;
 
                 match name.local_name.as_ref() {
                     "bulletRef" | "actionRef" | "fireRef"
@@ -69,10 +52,10 @@ fn main() {
                     | "horizontal" | "vertical"
                     | "term" | "param" => {
 
-                        tag_stack.push(string2name(&name.local_name));
+                        curr_tag = name.local_name.to_string();
 
-                        info!("pushing {}", &name.local_name);
-                        curr_node = arena.alloc(arena_tree::Node::new(BulletMLNode::new_cell(&name.local_name)));
+                        println!("{}+{} {:?}", indent(depth), name.local_name, attributes);
+                        depth += 1;
 
                         match attributes.is_empty() {
                             true => {}
@@ -80,29 +63,31 @@ fn main() {
                                 match attributes[0].name.local_name.as_ref() {
                                     "label" =>  {
                                         curr_label = attributes[0].value.to_string();
-
-                                        if parent_label == "" {
-                                            parent_label = attributes[0].value.to_string();
-                                        } else {
-                                            parent_label = curr_label
-                                        }
+                                        curr_type = "none".to_string();
                                     },
 
-                                    "type" => { curr_node.data.borrow_mut().set_type(&attributes[0].value) },
+                                    "type" => { curr_type = attributes[0].value.to_string();
+                                                curr_label = "none".to_string();},
                                     _ => {}
                                 }
                             }
                         }
+
+                        let curr_node = arena.alloc(Node::new(BulletMLData::new_cell(&curr_tag)));
+                        curr_node.data.borrow_mut().set_type(&curr_type);
+                        curr_node.data.borrow_mut().set_label(&curr_label);
+                        root.insert(curr_node, depth as i32);
+
+                        curr_tag = "".to_string();
+                        curr_label = "".to_string();
+                        curr_type = "".to_string();
                     }
 
-                    // bulletml ignored, we start with a bulletml node directly
                     _ => {}
                 }
             }
 
             XmlEvent::EndElement { name } => {
-
-                info!("popping {:?}", tag_stack.pop());
 
                 match name.local_name.as_ref() {
                     "bulletRef" | "actionRef" | "fireRef"
@@ -113,19 +98,12 @@ fn main() {
                     | "horizontal" | "vertical"
                     | "term" | "param" =>
                         {
-                            if curr_tag == name.local_name {
-
-                                depth -= 1;
-                                println!("{}-{}", indent(depth), &name.local_name);
-
-                                curr_tag = parent_tag.to_string();
-                                curr_label = parent_label.to_string();
-                            }
+                            depth -= 1;
+                            println!("{}-{}", indent(depth), &name.local_name);
                         }
 
                     _ => {}
                 }
-
             }
 
             XmlEvent::Characters(s) => {
@@ -141,5 +119,5 @@ fn main() {
         }
     }
 
-    println!("{:?}", tag_stack);
+    println!("{:?}", root);
 }
