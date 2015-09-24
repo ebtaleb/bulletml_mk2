@@ -1,0 +1,5 @@
+digraph mytree {
+    bulletml -> action;
+    action -> fire;
+    fire -> bulletref
+}
